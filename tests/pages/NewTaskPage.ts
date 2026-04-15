@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { Sidebar } from './Sidebar';
+import { waitForStatusCompleted } from '../helpers/statusWait';
 
 export type TaskStep = 'planning' | 'code_generation' | 'detect_component';
 export type Mode = 'smart' | 'fast';
@@ -22,8 +23,14 @@ export class NewTaskPage {
 
   readonly DismissTrialBannerButton: Locator;
   readonly PlanningStatusButton: Locator;
+  readonly CodeGenerationStatusButton: Locator;
+  readonly PrePrStatusButton: Locator;
   readonly DiscardTaskButton: Locator;
   readonly ConfirmDiscardTaskButton: Locator;
+  readonly PlanningBuildButton: Locator;
+  readonly SendToDevsButton: Locator;
+  readonly SendToDevsDialog: Locator;
+  readonly ConfirmSendToDevsDialogButton: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -43,8 +50,17 @@ export class NewTaskPage {
 
     this.DismissTrialBannerButton = page.getByRole('button', { name: /dismiss trial banner/i });
     this.PlanningStatusButton = page.getByRole('button', { name: /^planning\s*-\s*/i });
+    this.CodeGenerationStatusButton = page.getByRole('button', { name: /^code generation\s*-\s*/i });
+    this.PrePrStatusButton = page.getByRole('button', { name: /^pre\s*-?\s*pr\s*-\s*/i });
     this.DiscardTaskButton = page.getByTestId('discard-task-button');
     this.ConfirmDiscardTaskButton = page.getByTestId('close-task-discard-button');
+    this.PlanningBuildButton = page.getByTestId('planning-build-button');
+    this.SendToDevsButton = page.getByTestId('send-to-devs-button');
+
+    this.SendToDevsDialog = page.getByRole('dialog', { name: /send to devs/i });
+    this.ConfirmSendToDevsDialogButton = this.SendToDevsDialog.getByRole('button', {
+      name: /^send to devs$/i,
+    });
   }
 
   async assertLoaded() {
@@ -127,22 +143,25 @@ export class NewTaskPage {
   }
 
   async waitForPlanningCompleted(opts?: { timeout?: number }) {
-    const timeout = opts?.timeout ?? 5 * 60_000;
-    await expect(this.PlanningStatusButton).toBeVisible({ timeout });
+    await waitForStatusCompleted(this.PlanningStatusButton, {
+      label: 'Planning',
+      timeout: opts?.timeout,
+    });
+  }
 
-    await expect
-      .poll(
-        async () => {
-          const text = (await this.PlanningStatusButton.textContent()) ?? '';
-          return text.trim();
-        },
-        {
-          timeout,
-          intervals: [250, 500, 1000, 2000, 5000, 10_000],
-          message: 'Waiting for "Planning - Completed"',
-        },
-      )
-      .toMatch(/planning\s*-\s*completed/i);
+  async waitForCodeGenerationCompleted(opts?: { timeout?: number }) {
+    await waitForStatusCompleted(this.CodeGenerationStatusButton, {
+      label: 'Code Generation',
+      timeout: opts?.timeout,
+    });
+  }
+
+  async waitForPrePrCompleted(opts?: { timeout?: number }) {
+    await waitForStatusCompleted(this.PrePrStatusButton, {
+      label: 'Pre PR',
+      completedPattern: /pre\s*-?\s*pr\s*-\s*completed/i,
+      timeout: opts?.timeout,
+    });
   }
 
   async discardTask(opts?: { timeout?: number }) {
@@ -153,6 +172,44 @@ export class NewTaskPage {
     // Confirm in the modal/popover that appears after clicking discard.
     await expect(this.ConfirmDiscardTaskButton).toBeVisible({ timeout });
     await this.ConfirmDiscardTaskButton.click();
+  }
+
+  async pressBuild(opts?: { timeout?: number }) {
+    const timeout = opts?.timeout ?? 30_000;
+    await expect(this.PlanningBuildButton).toBeVisible({ timeout });
+    await this.PlanningBuildButton.click();
+  }
+
+  async sendToDevs(opts?: { timeout?: number }) {
+    const timeout = opts?.timeout ?? 30_000;
+    await expect(this.SendToDevsButton).toBeVisible({ timeout });
+    await expect(this.SendToDevsButton).toBeEnabled({ timeout });
+
+    await this.SendToDevsButton.click();
+
+    // Clicking the top-bar button opens a confirmation dialog.
+    await expect(this.SendToDevsDialog).toBeVisible({ timeout });
+    await expect(this.ConfirmSendToDevsDialogButton).toBeVisible({ timeout });
+    await expect(this.ConfirmSendToDevsDialogButton).toBeEnabled({ timeout });
+    await this.ConfirmSendToDevsDialogButton.click();
+
+    // Confirm click had an effect: Pre PR status appears or the dialog closes.
+    await expect
+      .poll(
+        async () => {
+          const [dialogVisible, prePrVisible] = await Promise.all([
+            this.SendToDevsDialog.isVisible().catch(() => false),
+            this.PrePrStatusButton.isVisible().catch(() => false),
+          ]);
+          return prePrVisible || !dialogVisible;
+        },
+        {
+          timeout,
+          intervals: [250, 500, 1000, 2000],
+          message: 'Waiting for Send to Devs confirmation to start',
+        },
+      )
+      .toBeTruthy();
   }
 }
 
