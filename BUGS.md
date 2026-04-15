@@ -103,4 +103,5 @@
 - In **Project Settings → Coding standards**, the Save button state does not reflect whether there are unsaved edits (it doesn’t reliably enable/disable based on changes).
 - Showing only the **Draft** state is not very user-friendly; consider exposing additional states (e.g., “Building”, “In progress”, etc.) so users understand what’s happening.
 - There’s no clear way to stop/cancel an in-progress prompt/chat once it has started.
+- Discarding a chat is slow enough to confuse users. Even if backend cleanup takes time, consider doing an immediate **soft delete** in the UI (hide/remove the chat right away), then delete dependent data asynchronously in the background.
 
