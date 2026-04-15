@@ -1,0 +1,29 @@
+{
+  "name": "pw-autonomy",
+  "version": "1.0.0",
+  "description": "Playwright poject meant to be sent to Aotonomy.ai team asa a technical task",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adobrov-cloud/pw-autonomy.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/adobrov-cloud/pw-autonomy/issues"
+  },
+  "homepage": "https://github.com/adobrov-cloud/pw-autonomy#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^22.15.3",
+    "dotenv": "^16.6.1"
+  }
+}
