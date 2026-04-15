@@ -3,7 +3,7 @@
 ## Environment
 - **Date**: 2026-04-15
 - **App**: AutonomyAI Studio
-- **URL**: `https://studio.autonomyai.io/forgot-password`
+- **URL**: `https://studio.autonomyai.io/`
 - **Browser/OS**: Chrome 142 (Cursor/Electron) on macOS 10.15.7
 
 ## Issues
@@ -93,6 +93,10 @@
 ## Observations (from exploratory testing)
 
 - The site is not consistently responsive on smaller/tablet viewports; the smallest usable layout I found was iPad landscape.
+- On the login page, submitting the login form with no data does not show any error/validation message.
+- On the login page, when deleting text from the email field, it’s not possible to delete the last 2 characters.
+- On the login page, the email validation error copy is not user-friendly (e.g., “Please include an '@' in the email address. 'om' is missing an '@'.”).
+- On the login page, the form accepts invalid email-like strings (e.g., `om@c`) and shows no validation error.
 - In **Integrations → Add a new project**, the flow always opens a new tab to request permissions, even when permissions have already been granted.
 - On `https://studio.autonomyai.io/users` (Manage Users), the left-side navigation menu is missing.
 - Even if a user cannot belong to multiple organizations at the same time, the organization dropdown is still rendered, which is confusing.
