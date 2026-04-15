@@ -38,5 +38,34 @@ test.describe('New Task (POM) - assertions', () => {
 
     await newTaskPage.discardTask();
   });
+
+  test('submits planning prompt and builds after completion', async ({ page }) => {
+    test.setTimeout(40 * 60_000);
+    await loginWithEnv(page);
+
+    const newTaskPage = new NewTaskPage(page);
+    await newTaskPage.open();
+    await newTaskPage.assertLoaded();
+
+    const prompt =
+      'Run the application locally and open  http://localhost:3000/projects/new . ' +
+      'Create a new project and set its name to:  {current timestamp} {faker.commerce.productName()} . ' +
+      'Use Faker’s  commerce.productName()  method to generate the project name, since that method produces descriptive product names like “Incredible Soft Gloves.”  ' +
+      'If you format the timestamp in ISO style, note that JavaScript’s  Date.prototype.toISOString()  returns a UTC timestamp ending in  Z , so use that only if UTC is acceptable for your flow';
+
+    await newTaskPage.setMode('smart');
+    await newTaskPage.createTask(prompt);
+
+    await newTaskPage.waitForPlanningCompleted({ timeout: 10 * 60_000 });
+    await newTaskPage.pressBuild();
+
+    await expect(page.getByText("Plan approved. Let's make it real!")).toBeVisible({
+      timeout: 60_000,
+    });
+
+    await newTaskPage.waitForCodeGenerationCompleted({ timeout: 20 * 60_000 });
+    await newTaskPage.sendToDevs();
+    await newTaskPage.waitForPrePrCompleted({ timeout: 10 * 60_000 });
+  });
 });
 
