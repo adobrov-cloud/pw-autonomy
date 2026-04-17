@@ -2,6 +2,10 @@
 
 Playwright + TypeScript UI automation project for **AutonomyAI Studio** (take-home submission).
 
+## Demo
+
+[Loom demo](https://www.loom.com/share/8159615848cb47889180ddd2d1099610)
+
 ## Setup
 
 - **Node.js**: 20+
