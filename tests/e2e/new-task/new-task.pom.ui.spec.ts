@@ -13,10 +13,10 @@ test.describe('New Task (POM) - assertions', () => {
     await expect(newTaskPage.ModeToggleButton).toBeVisible();
 
     await newTaskPage.setMode('smart');
-    await expect(newTaskPage.SwitchToFastModeButton).toBeVisible();
+    await newTaskPage.assertMode('smart');
 
     await newTaskPage.setMode('fast');
-    await expect(newTaskPage.SwitchToSmartModeButton).toBeVisible();
+    await newTaskPage.assertMode('fast');
   });
 
   test('submits in fast mode and receives echo response', async ({ page }) => {

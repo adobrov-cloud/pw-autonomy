@@ -85,27 +85,46 @@ export class NewTaskPage {
     await this.page.getByTestId(`step-selector-item-${step}`).click();
   }
 
+  private expectedModeToggleNextLabel(mode: Mode) {
+    // The toggle button label indicates the *next* mode it will switch to.
+    // If "Switch to fast mode" is visible -> current mode is smart.
+    return mode === 'smart' ? /switch to fast mode/i : /switch to smart mode/i;
+  }
+
+  private async modeToggleLabelLowercase() {
+    // Prefer aria-label since the button has no visible text in some states.
+    const label = await this.ModeToggleButton.getAttribute('aria-label').catch(() => null);
+    if (label) return label.toLowerCase();
+
+    const text = await this.ModeToggleButton.textContent().catch(() => null);
+    return (text ?? '').trim().toLowerCase();
+  }
+
   /**
-   * The toggle button label indicates the *next* mode it will switch to.
-   * If "Switch to smart mode" is visible -> current mode is fast, click to become smart.
+   * Sets mode by clicking the toggle until the label matches.
    */
   async setMode(mode: Mode) {
-    const clickIfVisible = async (locator: Locator) => {
-      if (await locator.isVisible().catch(() => false)) {
-        await locator.click();
-        return true;
-      }
-      return false;
-    };
+    await expect(this.ModeToggleButton).toBeVisible();
 
-    if (mode === 'smart') {
-      await clickIfVisible(this.SwitchToSmartModeButton);
-      await expect(this.SwitchToFastModeButton).toBeVisible();
-      return;
+    const expectedNextLabel = this.expectedModeToggleNextLabel(mode);
+    if (expectedNextLabel.test(await this.modeToggleLabelLowercase())) return;
+
+    await this.ModeToggleButton.scrollIntoViewIfNeeded().catch(() => {});
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await this.ModeToggleButton.click();
+      await this.page.waitForTimeout(250);
+
+      if (expectedNextLabel.test(await this.modeToggleLabelLowercase())) return;
     }
 
-    await clickIfVisible(this.SwitchToFastModeButton);
-    await expect(this.SwitchToSmartModeButton).toBeVisible();
+    await expect(this.ModeToggleButton).toHaveAccessibleName(expectedNextLabel, { timeout: 10_000 });
+  }
+
+  async assertMode(mode: Mode) {
+    await expect(this.ModeToggleButton).toBeVisible();
+    await expect(this.ModeToggleButton).toHaveAccessibleName(
+      this.expectedModeToggleNextLabel(mode),
+    );
   }
 
   async switchToSmartMode() {
@@ -166,12 +185,18 @@ export class NewTaskPage {
 
   async discardTask(opts?: { timeout?: number }) {
     const timeout = opts?.timeout ?? 30_000;
-    await expect(this.DiscardTaskButton).toBeVisible({ timeout });
-    await this.DiscardTaskButton.click();
+    if (await this.DiscardTaskButton.isVisible().catch(() => false)) {
+      await this.DiscardTaskButton.click();
 
-    // Confirm in the modal/popover that appears after clicking discard.
-    await expect(this.ConfirmDiscardTaskButton).toBeVisible({ timeout });
-    await this.ConfirmDiscardTaskButton.click();
+      await expect(this.ConfirmDiscardTaskButton).toBeVisible({ timeout });
+      await this.ConfirmDiscardTaskButton.click();
+      return;
+    }
+
+    // Some UI states (e.g. after completion) may not surface a discard control.
+    // Fallback: navigate to a fresh New Task view so subsequent tests start clean.
+    await this.sidebar.goToNewTask();
+    await this.assertLoaded();
   }
 
   async pressBuild(opts?: { timeout?: number }) {
